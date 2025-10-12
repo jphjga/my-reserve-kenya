@@ -14,6 +14,38 @@ export type Database = {
   }
   public: {
     Tables: {
+      business_users: {
+        Row: {
+          business_id: string
+          created_at: string | null
+          email: string
+          id: string
+          updated_at: string | null
+        }
+        Insert: {
+          business_id: string
+          created_at?: string | null
+          email: string
+          id?: string
+          updated_at?: string | null
+        }
+        Update: {
+          business_id?: string
+          created_at?: string | null
+          email?: string
+          id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "business_users_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       businesses: {
         Row: {
           amenities: string[] | null
@@ -21,6 +53,7 @@ export type Database = {
           created_at: string | null
           description: string | null
           email: string | null
+          has_account: boolean | null
           id: string
           image_url: string | null
           location: string
@@ -37,6 +70,7 @@ export type Database = {
           created_at?: string | null
           description?: string | null
           email?: string | null
+          has_account?: boolean | null
           id?: string
           image_url?: string | null
           location: string
@@ -53,6 +87,7 @@ export type Database = {
           created_at?: string | null
           description?: string | null
           email?: string | null
+          has_account?: boolean | null
           id?: string
           image_url?: string | null
           location?: string
@@ -62,6 +97,130 @@ export type Database = {
           price_range?: string | null
           rating?: number | null
           updated_at?: string | null
+        }
+        Relationships: []
+      }
+      events: {
+        Row: {
+          available_tickets: number
+          business_id: string
+          created_at: string | null
+          description: string | null
+          event_date: string
+          event_time: string
+          id: string
+          image_url: string | null
+          location: string
+          ticket_price: number
+          title: string
+          total_tickets: number
+          updated_at: string | null
+        }
+        Insert: {
+          available_tickets: number
+          business_id: string
+          created_at?: string | null
+          description?: string | null
+          event_date: string
+          event_time: string
+          id?: string
+          image_url?: string | null
+          location: string
+          ticket_price?: number
+          title: string
+          total_tickets: number
+          updated_at?: string | null
+        }
+        Update: {
+          available_tickets?: number
+          business_id?: string
+          created_at?: string | null
+          description?: string | null
+          event_date?: string
+          event_time?: string
+          id?: string
+          image_url?: string | null
+          location?: string
+          ticket_price?: number
+          title?: string
+          total_tickets?: number
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "events_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      messages: {
+        Row: {
+          business_id: string
+          created_at: string | null
+          id: string
+          is_from_business: boolean | null
+          message: string
+          sender_id: string
+        }
+        Insert: {
+          business_id: string
+          created_at?: string | null
+          id?: string
+          is_from_business?: boolean | null
+          message: string
+          sender_id: string
+        }
+        Update: {
+          business_id?: string
+          created_at?: string | null
+          id?: string
+          is_from_business?: boolean | null
+          message?: string
+          sender_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "messages_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      notifications: {
+        Row: {
+          created_at: string | null
+          id: string
+          is_read: boolean | null
+          message: string
+          related_id: string | null
+          title: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          is_read?: boolean | null
+          message: string
+          related_id?: string | null
+          title: string
+          type: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          is_read?: boolean | null
+          message?: string
+          related_id?: string | null
+          title?: string
+          type?: string
+          user_id?: string
         }
         Relationships: []
       }

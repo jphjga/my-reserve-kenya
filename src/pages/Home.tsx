@@ -52,16 +52,25 @@ const Home = () => {
       {/* Hero Section */}
       <section className="relative bg-gradient-to-r from-primary to-primary-glow text-primary-foreground py-20">
         <div className="container mx-auto px-4">
-          <div className="max-w-2xl">
-            <h1 className="text-5xl font-bold mb-4">Reserve Your Perfect Experience</h1>
-            <p className="text-xl mb-8 opacity-90">
-              Book restaurants and hotels across Kenya with secure M-Pesa payments
-            </p>
-            <Button size="lg" variant="secondary" asChild>
-              <Link to="#browse">
-                Browse Businesses <ArrowRight className="ml-2 w-5 h-5" />
-              </Link>
-            </Button>
+          <div className="flex justify-between items-center">
+            <div className="max-w-2xl">
+              <h1 className="text-5xl font-bold mb-4">Reserve Your Perfect Experience</h1>
+              <p className="text-xl mb-8 opacity-90">
+                Book restaurants and hotels across Kenya with secure M-Pesa payments
+              </p>
+              <Button size="lg" variant="secondary" asChild>
+                <Link to="#browse">
+                  Browse Businesses <ArrowRight className="ml-2 w-5 h-5" />
+                </Link>
+              </Button>
+            </div>
+            <div>
+              <Button size="lg" variant="outline" className="bg-white text-primary hover:bg-white/90" asChild>
+                <Link to="/business-auth">
+                  Business Portal
+                </Link>
+              </Button>
+            </div>
           </div>
         </div>
       </section>

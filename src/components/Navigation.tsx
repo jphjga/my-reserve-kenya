@@ -1,6 +1,7 @@
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { User, LogOut, Calendar, Home } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { User, LogOut, Calendar, Home, Ticket, Bell } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useState, useEffect } from "react";
@@ -10,6 +11,7 @@ export const Navigation = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [user, setUser] = useState<SupabaseUser | null>(null);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -22,6 +24,39 @@ export const Navigation = () => {
 
     return () => subscription.unsubscribe();
   }, []);
+
+  useEffect(() => {
+    if (user) {
+      fetchUnreadCount();
+      
+      const channel = supabase
+        .channel('notifications-count')
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'notifications',
+            filter: `user_id=eq.${user.id}`
+          },
+          () => fetchUnreadCount()
+        )
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(channel);
+      };
+    }
+  }, [user]);
+
+  const fetchUnreadCount = async () => {
+    const { count } = await supabase
+      .from("notifications")
+      .select("*", { count: "exact", head: true })
+      .eq("is_read", false);
+    
+    setUnreadCount(count || 0);
+  };
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -49,6 +84,26 @@ export const Navigation = () => {
                 <Link to="/">
                   <Home className="w-4 h-4 mr-2" />
                   Home
+                </Link>
+              </Button>
+              <Button variant="ghost" size="sm" asChild>
+                <Link to="/events">
+                  <Ticket className="w-4 h-4 mr-2" />
+                  Events
+                </Link>
+              </Button>
+              <Button variant="ghost" size="sm" asChild className="relative">
+                <Link to="/notifications">
+                  <Bell className="w-4 h-4 mr-2" />
+                  Notifications
+                  {unreadCount > 0 && (
+                    <Badge 
+                      variant="destructive" 
+                      className="absolute -top-1 -right-1 h-5 w-5 p-0 flex items-center justify-center text-xs"
+                    >
+                      {unreadCount}
+                    </Badge>
+                  )}
                 </Link>
               </Button>
               <Button variant="ghost" size="sm" asChild>
