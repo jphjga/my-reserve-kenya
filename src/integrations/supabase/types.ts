@@ -61,6 +61,7 @@ export type Database = {
           opening_hours: Json | null
           phone: string
           price_range: string | null
+          profile_completed: boolean | null
           rating: number | null
           updated_at: string | null
         }
@@ -78,6 +79,7 @@ export type Database = {
           opening_hours?: Json | null
           phone: string
           price_range?: string | null
+          profile_completed?: boolean | null
           rating?: number | null
           updated_at?: string | null
         }
@@ -95,6 +97,7 @@ export type Database = {
           opening_hours?: Json | null
           phone?: string
           price_range?: string | null
+          profile_completed?: boolean | null
           rating?: number | null
           updated_at?: string | null
         }
@@ -315,7 +318,7 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      business_type: "restaurant" | "hotel"
+      business_type: "restaurant" | "hotel" | "garden" | "club"
       reservation_status: "pending" | "confirmed" | "cancelled" | "completed"
     }
     CompositeTypes: {
@@ -444,7 +447,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      business_type: ["restaurant", "hotel"],
+      business_type: ["restaurant", "hotel", "garden", "club"],
       reservation_status: ["pending", "confirmed", "cancelled", "completed"],
     },
   },

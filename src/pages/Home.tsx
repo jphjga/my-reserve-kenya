@@ -11,7 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 interface Business {
   id: string;
   name: string;
-  business_type: 'restaurant' | 'hotel';
+  business_type: 'restaurant' | 'hotel' | 'garden' | 'club';
   description: string;
   location: string;
   phone: string;

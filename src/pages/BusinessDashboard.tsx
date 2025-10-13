@@ -8,6 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import BusinessDetailsManager from "@/components/BusinessDetailsManager";
 import EventsManager from "@/components/EventsManager";
 import BusinessMessages from "@/components/BusinessMessages";
+import BusinessProfileCompletion from "@/components/BusinessProfileCompletion";
 import { Building2, Calendar, MessageSquare, LogOut } from "lucide-react";
 
 const BusinessDashboard = () => {
@@ -15,6 +16,7 @@ const BusinessDashboard = () => {
   const { toast } = useToast();
   const [businessId, setBusinessId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [profileCompleted, setProfileCompleted] = useState(false);
 
   useEffect(() => {
     checkAuth();
@@ -42,6 +44,17 @@ const BusinessDashboard = () => {
       }
 
       setBusinessId(businessUser.business_id);
+
+      // Check if profile is completed
+      const { data: businessData, error: businessDataError } = await supabase
+        .from("businesses")
+        .select("profile_completed")
+        .eq("id", businessUser.business_id)
+        .single();
+
+      if (!businessDataError && businessData) {
+        setProfileCompleted(businessData.profile_completed || false);
+      }
     } catch (error) {
       console.error("Auth check error:", error);
       navigate("/business-auth");
@@ -63,6 +76,28 @@ const BusinessDashboard = () => {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <p>Loading...</p>
+      </div>
+    );
+  }
+
+  if (!businessId) {
+    return null;
+  }
+
+  if (!profileCompleted) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-background to-muted p-4 flex items-center justify-center">
+        <div className="w-full max-w-4xl">
+          <div className="mb-4 flex justify-end">
+            <Button onClick={handleLogout} variant="outline">
+              Logout
+            </Button>
+          </div>
+          <BusinessProfileCompletion 
+            businessId={businessId} 
+            onComplete={() => setProfileCompleted(true)}
+          />
+        </div>
       </div>
     );
   }
@@ -101,7 +136,7 @@ const BusinessDashboard = () => {
                 <CardDescription>Update your business information and images</CardDescription>
               </CardHeader>
               <CardContent>
-                {businessId && <BusinessDetailsManager businessId={businessId} />}
+                <BusinessDetailsManager businessId={businessId} />
               </CardContent>
             </Card>
           </TabsContent>
@@ -113,7 +148,7 @@ const BusinessDashboard = () => {
                 <CardDescription>Create and manage your business events</CardDescription>
               </CardHeader>
               <CardContent>
-                {businessId && <EventsManager businessId={businessId} />}
+                <EventsManager businessId={businessId} />
               </CardContent>
             </Card>
           </TabsContent>
@@ -125,7 +160,7 @@ const BusinessDashboard = () => {
                 <CardDescription>Communicate with your customers</CardDescription>
               </CardHeader>
               <CardContent>
-                {businessId && <BusinessMessages businessId={businessId} />}
+                <BusinessMessages businessId={businessId} />
               </CardContent>
             </Card>
           </TabsContent>

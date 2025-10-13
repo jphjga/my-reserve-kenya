@@ -14,7 +14,7 @@ import type { User } from "@supabase/supabase-js";
 interface Business {
   id: string;
   name: string;
-  business_type: 'restaurant' | 'hotel';
+  business_type: 'restaurant' | 'hotel' | 'garden' | 'club';
   price_range: string;
 }
 

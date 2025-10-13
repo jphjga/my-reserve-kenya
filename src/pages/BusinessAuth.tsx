@@ -13,7 +13,10 @@ const BusinessAuth = () => {
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [businessId, setBusinessId] = useState("");
+  const [businessName, setBusinessName] = useState("");
+  const [businessType, setBusinessType] = useState<"restaurant" | "hotel" | "garden" | "club">("restaurant");
+  const [location, setLocation] = useState("");
+  const [phone, setPhone] = useState("");
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -61,6 +64,7 @@ const BusinessAuth = () => {
     setLoading(true);
 
     try {
+      // Create auth user
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email,
         password,
@@ -70,21 +74,38 @@ const BusinessAuth = () => {
       });
 
       if (authError) throw authError;
+      if (!authData.user) throw new Error("Failed to create user");
 
-      // Create business user record
+      // Create business record
+      const { data: businessData, error: businessError } = await supabase
+        .from("businesses")
+        .insert({
+          name: businessName,
+          business_type: businessType,
+          location: location,
+          phone: phone,
+          email: email,
+          profile_completed: false,
+        })
+        .select()
+        .single();
+
+      if (businessError) throw businessError;
+
+      // Create business_user record linking auth user to business
       const { error: businessUserError } = await supabase
         .from("business_users")
         .insert({
-          id: authData.user!.id,
-          business_id: businessId,
-          email,
+          id: authData.user.id,
+          business_id: businessData.id,
+          email: email,
         });
 
       if (businessUserError) throw businessUserError;
 
       toast({
         title: "Success",
-        description: "Account created successfully",
+        description: "Account created! Please complete your profile.",
       });
 
       navigate("/business-dashboard");
@@ -144,9 +165,40 @@ const BusinessAuth = () => {
                 <div>
                   <Input
                     type="text"
-                    placeholder="Business ID"
-                    value={businessId}
-                    onChange={(e) => setBusinessId(e.target.value)}
+                    placeholder="Business Name"
+                    value={businessName}
+                    onChange={(e) => setBusinessName(e.target.value)}
+                    required
+                  />
+                </div>
+                <div>
+                  <select
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                    value={businessType}
+                    onChange={(e) => setBusinessType(e.target.value as any)}
+                    required
+                  >
+                    <option value="restaurant">Restaurant</option>
+                    <option value="hotel">Hotel</option>
+                    <option value="garden">Garden</option>
+                    <option value="club">Club</option>
+                  </select>
+                </div>
+                <div>
+                  <Input
+                    type="text"
+                    placeholder="Location"
+                    value={location}
+                    onChange={(e) => setLocation(e.target.value)}
+                    required
+                  />
+                </div>
+                <div>
+                  <Input
+                    type="tel"
+                    placeholder="Phone Number"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
                     required
                   />
                 </div>
@@ -166,10 +218,11 @@ const BusinessAuth = () => {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
+                    minLength={6}
                   />
                 </div>
                 <Button type="submit" className="w-full" disabled={loading}>
-                  {loading ? "Loading..." : "Create Account"}
+                  {loading ? "Creating Account..." : "Create Account"}
                 </Button>
               </form>
             </TabsContent>
