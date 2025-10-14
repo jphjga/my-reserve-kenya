@@ -5,6 +5,7 @@ import { Navigation } from "@/components/Navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Calendar, Clock, Users, MapPin } from "lucide-react";
+import MessageDialog from "@/components/MessageDialog";
 import type { User } from "@supabase/supabase-js";
 
 interface Reservation {
@@ -15,7 +16,9 @@ interface Reservation {
   status: string;
   total_amount: number;
   payment_status: string;
+  business_id: string;
   businesses: {
+    id: string;
     name: string;
     location: string;
     business_type: string;
@@ -55,6 +58,7 @@ const Reservations = () => {
       .select(`
         *,
         businesses (
+          id,
           name,
           location,
           business_type
@@ -142,6 +146,13 @@ const Reservations = () => {
                         {reservation.payment_status}
                       </Badge>
                     </div>
+                  </div>
+                  <div className="pt-2 border-t">
+                    <MessageDialog
+                      reservationId={reservation.id}
+                      businessId={reservation.business_id}
+                      businessName={reservation.businesses.name}
+                    />
                   </div>
                 </CardContent>
               </Card>

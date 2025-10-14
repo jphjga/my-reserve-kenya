@@ -7,9 +7,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import BusinessDetailsManager from "@/components/BusinessDetailsManager";
 import EventsManager from "@/components/EventsManager";
-import BusinessMessages from "@/components/BusinessMessages";
+import BusinessMessagesRefactored from "@/components/BusinessMessagesRefactored";
 import BusinessProfileCompletion from "@/components/BusinessProfileCompletion";
-import { Building2, Calendar, MessageSquare, LogOut } from "lucide-react";
+import { Building2, Calendar, MessageSquare, LogOut, Home } from "lucide-react";
+import { Link } from "react-router-dom";
 
 const BusinessDashboard = () => {
   const navigate = useNavigate();
@@ -104,13 +105,21 @@ const BusinessDashboard = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background to-muted">
-      <div className="container mx-auto p-4">
+      <div className="container mx-auto p-4 max-w-6xl">
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-3xl font-bold">Business Dashboard</h1>
-          <Button variant="outline" onClick={handleLogout}>
-            <LogOut className="mr-2 h-4 w-4" />
-            Logout
-          </Button>
+          <div className="flex gap-2">
+            <Button asChild variant="outline">
+              <Link to="/">
+                <Home className="mr-2 h-4 w-4" />
+                Home
+              </Link>
+            </Button>
+            <Button onClick={handleLogout} variant="outline">
+              <LogOut className="mr-2 h-4 w-4" />
+              Logout
+            </Button>
+          </div>
         </div>
 
         <Tabs defaultValue="details" className="w-full">
@@ -156,11 +165,11 @@ const BusinessDashboard = () => {
           <TabsContent value="messages">
             <Card>
               <CardHeader>
-                <CardTitle>Customer Messages</CardTitle>
-                <CardDescription>Communicate with your customers</CardDescription>
+                <CardTitle>Messages</CardTitle>
+                <CardDescription>Customer conversations</CardDescription>
               </CardHeader>
               <CardContent>
-                <BusinessMessages businessId={businessId} />
+                <BusinessMessagesRefactored businessId={businessId} />
               </CardContent>
             </Card>
           </TabsContent>

@@ -106,14 +106,17 @@ export type Database = {
       events: {
         Row: {
           available_tickets: number
+          booking_item_type: string | null
           business_id: string
           created_at: string | null
           description: string | null
           event_date: string
           event_time: string
+          event_type: Database["public"]["Enums"]["event_type"]
           id: string
           image_url: string | null
           location: string
+          requires_upfront_payment: boolean | null
           ticket_price: number
           title: string
           total_tickets: number
@@ -121,14 +124,17 @@ export type Database = {
         }
         Insert: {
           available_tickets: number
+          booking_item_type?: string | null
           business_id: string
           created_at?: string | null
           description?: string | null
           event_date: string
           event_time: string
+          event_type?: Database["public"]["Enums"]["event_type"]
           id?: string
           image_url?: string | null
           location: string
+          requires_upfront_payment?: boolean | null
           ticket_price?: number
           title: string
           total_tickets: number
@@ -136,14 +142,17 @@ export type Database = {
         }
         Update: {
           available_tickets?: number
+          booking_item_type?: string | null
           business_id?: string
           created_at?: string | null
           description?: string | null
           event_date?: string
           event_time?: string
+          event_type?: Database["public"]["Enums"]["event_type"]
           id?: string
           image_url?: string | null
           location?: string
+          requires_upfront_payment?: boolean | null
           ticket_price?: number
           title?: string
           total_tickets?: number
@@ -162,26 +171,35 @@ export type Database = {
       messages: {
         Row: {
           business_id: string
+          conversation_id: string | null
           created_at: string | null
           id: string
           is_from_business: boolean | null
+          is_read: boolean | null
           message: string
+          reservation_id: string | null
           sender_id: string
         }
         Insert: {
           business_id: string
+          conversation_id?: string | null
           created_at?: string | null
           id?: string
           is_from_business?: boolean | null
+          is_read?: boolean | null
           message: string
+          reservation_id?: string | null
           sender_id: string
         }
         Update: {
           business_id?: string
+          conversation_id?: string | null
           created_at?: string | null
           id?: string
           is_from_business?: boolean | null
+          is_read?: boolean | null
           message?: string
+          reservation_id?: string | null
           sender_id?: string
         }
         Relationships: [
@@ -190,6 +208,13 @@ export type Database = {
             columns: ["business_id"]
             isOneToOne: false
             referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "messages_reservation_id_fkey"
+            columns: ["reservation_id"]
+            isOneToOne: false
+            referencedRelation: "reservations"
             referencedColumns: ["id"]
           },
         ]
@@ -256,6 +281,7 @@ export type Database = {
       }
       reservations: {
         Row: {
+          booking_item_description: string | null
           business_id: string
           created_at: string | null
           id: string
@@ -271,6 +297,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          booking_item_description?: string | null
           business_id: string
           created_at?: string | null
           id?: string
@@ -286,6 +313,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          booking_item_description?: string | null
           business_id?: string
           created_at?: string | null
           id?: string
@@ -319,6 +347,7 @@ export type Database = {
     }
     Enums: {
       business_type: "restaurant" | "hotel" | "garden" | "club"
+      event_type: "time_based_event" | "service_booking"
       reservation_status: "pending" | "confirmed" | "cancelled" | "completed"
     }
     CompositeTypes: {
@@ -448,6 +477,7 @@ export const Constants = {
   public: {
     Enums: {
       business_type: ["restaurant", "hotel", "garden", "club"],
+      event_type: ["time_based_event", "service_booking"],
       reservation_status: ["pending", "confirmed", "cancelled", "completed"],
     },
   },

@@ -28,6 +28,23 @@ const Events = () => {
 
   useEffect(() => {
     fetchEvents();
+
+    const channel = supabase
+      .channel('events-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'events',
+        },
+        () => fetchEvents()
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   const fetchEvents = async () => {
@@ -95,15 +112,19 @@ const Events = () => {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <Ticket className="h-4 w-4" />
-                      <span className="font-semibold">KSh {event.ticket_price}</span>
+                      <span className="font-semibold">
+                        {event.ticket_price > 0 ? `KSh ${event.ticket_price}` : 'Free Entry'}
+                      </span>
                     </div>
-                    <Badge variant={event.available_tickets > 0 ? "default" : "destructive"}>
-                      {event.available_tickets} tickets left
-                    </Badge>
+                    {event.ticket_price > 0 && (
+                      <Badge variant={event.available_tickets > 0 ? "default" : "destructive"}>
+                        {event.available_tickets > 0 ? `${event.available_tickets} tickets left` : "Sold Out"}
+                      </Badge>
+                    )}
                   </div>
 
                   <Button className="w-full" disabled={event.available_tickets === 0}>
-                    {event.available_tickets > 0 ? "Buy Tickets" : "Sold Out"}
+                    {event.available_tickets > 0 ? (event.ticket_price > 0 ? "Buy Tickets" : "Book Now") : "Sold Out"}
                   </Button>
                 </CardContent>
               </Card>

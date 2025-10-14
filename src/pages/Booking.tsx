@@ -18,12 +18,24 @@ interface Business {
   price_range: string;
 }
 
+interface Event {
+  id: string;
+  title: string;
+  event_type: 'time_based_event' | 'service_booking';
+  requires_upfront_payment: boolean;
+  booking_item_type?: string;
+  available_tickets: number;
+  ticket_price: number;
+  business_id: string;
+}
+
 const Booking = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [user, setUser] = useState<User | null>(null);
   const [business, setBusiness] = useState<Business | null>(null);
+  const [event, setEvent] = useState<Event | null>(null);
   const [loading, setLoading] = useState(false);
   
   const [formData, setFormData] = useState({
@@ -33,6 +45,7 @@ const Booking = () => {
     amount: '5000',
     phone: '',
     specialRequests: '',
+    bookingItem: '',
   });
 
   useEffect(() => {
@@ -57,74 +70,107 @@ const Booking = () => {
 
   useEffect(() => {
     if (id) {
-      loadBusiness();
+      loadEventAndBusiness();
     }
   }, [id]);
 
-  const loadBusiness = async () => {
-    const { data, error } = await supabase
-      .from('businesses')
-      .select('id, name, business_type, price_range')
+  const loadEventAndBusiness = async () => {
+    const { data: eventData, error: eventError } = await supabase
+      .from('events')
+      .select('id, title, event_type, requires_upfront_payment, booking_item_type, available_tickets, ticket_price, business_id')
       .eq('id', id)
       .single();
 
-    if (error) {
-      console.error('Error loading business:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load business details",
-        variant: "destructive",
-      });
+    if (eventError) {
+      console.error('Error loading event:', eventError);
+      return;
+    }
+
+    setEvent(eventData);
+
+    const { data: businessData, error: businessError } = await supabase
+      .from('businesses')
+      .select('id, name, business_type, price_range')
+      .eq('id', eventData.business_id)
+      .single();
+
+    if (businessError) {
+      console.error('Error loading business:', businessError);
     } else {
-      setBusiness(data);
+      setBusiness(businessData);
     }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user || !business) return;
+    if (!user || !event) return;
+
+    if (event.available_tickets === 0) {
+      toast({
+        title: "Sold Out",
+        description: "This event is fully booked",
+        variant: "destructive",
+      });
+      return;
+    }
 
     setLoading(true);
 
     try {
-      // Create reservation
+      const reservationData: any = {
+        user_id: user.id,
+        business_id: business?.id,
+        reservation_date: formData.date,
+        reservation_time: formData.time,
+        number_of_people: parseInt(formData.people),
+        special_requests: formData.specialRequests,
+        total_amount: parseFloat(formData.amount),
+        status: 'pending',
+        payment_status: event.requires_upfront_payment ? 'pending' : 'pay_on_arrival',
+      };
+
+      if (event.event_type === 'service_booking') {
+        reservationData.booking_item_description = formData.bookingItem;
+      }
+
       const { data: reservation, error: reservationError } = await supabase
         .from('reservations')
-        .insert({
-          user_id: user.id,
-          business_id: business.id,
-          reservation_date: formData.date,
-          reservation_time: formData.time,
-          number_of_people: parseInt(formData.people),
-          special_requests: formData.specialRequests,
-          total_amount: parseFloat(formData.amount),
-          status: 'pending',
-        })
+        .insert(reservationData)
         .select()
         .single();
 
       if (reservationError) throw reservationError;
 
-      // Initiate M-Pesa payment
-      const { data: paymentData, error: paymentError } = await supabase.functions.invoke('initiate-mpesa-payment', {
-        body: {
-          phone: formData.phone,
-          amount: parseFloat(formData.amount),
-          reservationId: reservation.id,
-        },
-      });
+      if (event.requires_upfront_payment) {
+        const { data: paymentData, error: paymentError } = await supabase.functions.invoke('initiate-mpesa-payment', {
+          body: {
+            phone: formData.phone,
+            amount: parseFloat(formData.amount),
+            reservationId: reservation.id,
+          },
+        });
 
-      if (paymentError) throw paymentError;
+        if (paymentError) throw paymentError;
 
-      toast({
-        title: "Payment initiated!",
-        description: "Please check your phone and enter your M-Pesa PIN to complete the payment.",
-      });
+        toast({
+          title: "Payment initiated!",
+          description: "Please check your phone and enter your M-Pesa PIN to complete the payment.",
+        });
+      } else {
+        toast({
+          title: "Booking confirmed!",
+          description: "You can pay when you arrive at the venue.",
+        });
+      }
 
-      // Poll for payment confirmation
+      await supabase
+        .from('events')
+        .update({ available_tickets: event.available_tickets - 1 })
+        .eq('id', id);
+
       setTimeout(() => {
         navigate('/reservations');
-      }, 5000);
+      }, 3000);
 
     } catch (error: any) {
       console.error('Booking error:', error);
@@ -138,7 +184,7 @@ const Booking = () => {
     }
   };
 
-  if (!business) {
+  if (!event || !business) {
     return (
       <div className="min-h-screen bg-background">
         <Navigation />
@@ -155,16 +201,16 @@ const Booking = () => {
       
       <div className="container mx-auto px-4 py-8 max-w-2xl">
         <Button variant="ghost" asChild className="mb-6">
-          <Link to={`/business/${id}`}>
+          <Link to="/events">
             <ArrowLeft className="mr-2 w-4 h-4" />
-            Back to Business
+            Back to Events
           </Link>
         </Button>
 
         <Card>
           <CardHeader>
-            <CardTitle>Complete Your Reservation</CardTitle>
-            <CardDescription>Book at {business.name}</CardDescription>
+            <CardTitle>Complete Your Booking</CardTitle>
+            <CardDescription>{event.title} at {business.name}</CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-6">
@@ -194,7 +240,7 @@ const Booking = () => {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="people">Number of {business.business_type === 'hotel' ? 'Guests' : 'People'}</Label>
+                <Label htmlFor="people">Number of People</Label>
                 <Input
                   id="people"
                   type="number"
@@ -206,36 +252,60 @@ const Booking = () => {
                 />
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="amount">Amount (KSh)</Label>
-                <Input
-                  id="amount"
-                  type="number"
-                  min="100"
-                  step="100"
-                  value={formData.amount}
-                  onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
-                  required
-                />
-                <p className="text-sm text-muted-foreground">
-                  Estimated range: {business.price_range}
-                </p>
-              </div>
+              {event.event_type === 'service_booking' && (
+                <div className="space-y-2">
+                  <Label htmlFor="bookingItem">What are you booking? ({event.booking_item_type})</Label>
+                  <Input
+                    id="bookingItem"
+                    placeholder={`e.g., ${event.booking_item_type}`}
+                    value={formData.bookingItem}
+                    onChange={(e) => setFormData({ ...formData, bookingItem: e.target.value })}
+                    required
+                  />
+                </div>
+              )}
 
-              <div className="space-y-2">
-                <Label htmlFor="phone">M-Pesa Phone Number</Label>
-                <Input
-                  id="phone"
-                  type="tel"
-                  placeholder="254712345678"
-                  value={formData.phone}
-                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                  required
-                />
-                <p className="text-sm text-muted-foreground">
-                  Enter your M-Pesa registered phone number (format: 254XXXXXXXXX)
-                </p>
-              </div>
+              {event.requires_upfront_payment ? (
+                <>
+                  <div className="space-y-2">
+                    <Label htmlFor="amount">Amount (KSh)</Label>
+                    <Input
+                      id="amount"
+                      type="number"
+                      min={event.ticket_price}
+                      step="100"
+                      value={formData.amount}
+                      onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
+                      required
+                    />
+                    <p className="text-sm text-muted-foreground">
+                      Ticket price: KSh {event.ticket_price}
+                    </p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="phone">M-Pesa Phone Number</Label>
+                    <Input
+                      id="phone"
+                      type="tel"
+                      placeholder="254712345678"
+                      value={formData.phone}
+                      onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                      required
+                    />
+                    <p className="text-sm text-muted-foreground">
+                      Enter your M-Pesa registered phone number (format: 254XXXXXXXXX)
+                    </p>
+                  </div>
+                </>
+              ) : (
+                <div className="p-4 bg-muted rounded-lg">
+                  <p className="text-sm font-semibold">Payment on Arrival</p>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    You will pay when you arrive at the venue
+                  </p>
+                </div>
+              )}
 
               <div className="space-y-2">
                 <Label htmlFor="requests">Special Requests (Optional)</Label>
@@ -248,9 +318,19 @@ const Booking = () => {
                 />
               </div>
 
-              <Button type="submit" size="lg" className="w-full" disabled={loading}>
-                <CreditCard className="mr-2 w-5 h-5" />
-                {loading ? "Processing..." : `Pay KSh ${formData.amount} via M-Pesa`}
+              <Button type="submit" size="lg" className="w-full" disabled={loading || event.available_tickets === 0}>
+                {event.available_tickets === 0 ? (
+                  "Sold Out"
+                ) : loading ? (
+                  "Processing..."
+                ) : event.requires_upfront_payment ? (
+                  <>
+                    <CreditCard className="mr-2 w-5 h-5" />
+                    Pay KSh {formData.amount} via M-Pesa
+                  </>
+                ) : (
+                  "Confirm Booking"
+                )}
               </Button>
             </form>
           </CardContent>
