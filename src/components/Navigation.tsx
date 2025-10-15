@@ -25,6 +25,23 @@ export const Navigation = () => {
     return () => subscription.unsubscribe();
   }, []);
 
+  const handleProfileClick = async () => {
+    if (!user) return;
+    
+    // Check if user is a business user
+    // @ts-ignore - Supabase type instantiation issue
+    const { data } = await supabase
+      .from('business_users')
+      .select('business_id')
+      .eq('user_id', user.id);
+    
+    if (data && data.length > 0) {
+      navigate('/business-dashboard');
+    } else {
+      navigate('/profile');
+    }
+  };
+
   useEffect(() => {
     if (user) {
       fetchUnreadCount();
@@ -118,11 +135,9 @@ export const Navigation = () => {
                   My Reservations
                 </Link>
               </Button>
-              <Button variant="ghost" size="sm" asChild>
-                <Link to="/profile">
-                  <User className="w-4 h-4 mr-2" />
-                  Profile
-                </Link>
+              <Button variant="ghost" size="sm" onClick={handleProfileClick}>
+                <User className="w-4 h-4 mr-2" />
+                Profile
               </Button>
               <Button variant="outline" size="sm" onClick={handleLogout}>
                 <LogOut className="w-4 h-4 mr-2" />

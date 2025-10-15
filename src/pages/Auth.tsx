@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { Navigation } from "@/components/Navigation";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
 const Auth = () => {
   const navigate = useNavigate();
@@ -17,6 +18,7 @@ const Auth = () => {
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
   const [phone, setPhone] = useState("");
+  const [accountType, setAccountType] = useState<"customer" | "business">("customer");
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -61,6 +63,13 @@ const Auth = () => {
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // If business account type, redirect to business auth page
+    if (accountType === "business") {
+      navigate("/business-auth");
+      return;
+    }
+
     setLoading(true);
 
     const { error } = await supabase.auth.signInWithPassword({
@@ -103,6 +112,19 @@ const Auth = () => {
               
               <TabsContent value="signin">
                 <form onSubmit={handleSignIn} className="space-y-4">
+                  <div className="space-y-3">
+                    <Label>Account Type</Label>
+                    <RadioGroup value={accountType} onValueChange={(value) => setAccountType(value as "customer" | "business")}>
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="customer" id="customer" />
+                        <Label htmlFor="customer" className="font-normal cursor-pointer">Customer</Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="business" id="business" />
+                        <Label htmlFor="business" className="font-normal cursor-pointer">Business Owner</Label>
+                      </div>
+                    </RadioGroup>
+                  </div>
                   <div className="space-y-2">
                     <Label htmlFor="signin-email">Email</Label>
                     <Input
@@ -125,15 +147,44 @@ const Auth = () => {
                     />
                   </div>
                   <Button type="submit" className="w-full" disabled={loading}>
-                    {loading ? "Signing in..." : "Sign In"}
+                    {accountType === "business" ? "Continue to Business Portal" : (loading ? "Signing in..." : "Sign In")}
                   </Button>
+                  {accountType === "business" && (
+                    <p className="text-sm text-muted-foreground text-center">
+                      You'll be redirected to the business portal
+                    </p>
+                  )}
                 </form>
               </TabsContent>
               
               <TabsContent value="signup">
                 <form onSubmit={handleSignUp} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="signup-name">Full Name</Label>
+                  <div className="space-y-3">
+                    <Label>Account Type</Label>
+                    <RadioGroup value={accountType} onValueChange={(value) => setAccountType(value as "customer" | "business")}>
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="customer" id="customer-signup" />
+                        <Label htmlFor="customer-signup" className="font-normal cursor-pointer">Customer</Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="business" id="business-signup" />
+                        <Label htmlFor="business-signup" className="font-normal cursor-pointer">Business Owner</Label>
+                      </div>
+                    </RadioGroup>
+                  </div>
+                  {accountType === "business" ? (
+                    <div className="space-y-4">
+                      <p className="text-sm text-muted-foreground">
+                        Business owners need to register through the Business Portal
+                      </p>
+                      <Button type="button" className="w-full" asChild>
+                        <Link to="/business-auth">Go to Business Portal</Link>
+                      </Button>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="space-y-2">
+                        <Label htmlFor="signup-name">Full Name</Label>
                     <Input
                       id="signup-name"
                       type="text"
@@ -176,9 +227,11 @@ const Auth = () => {
                       minLength={6}
                     />
                   </div>
-                  <Button type="submit" className="w-full" disabled={loading}>
-                    {loading ? "Creating account..." : "Create Account"}
-                  </Button>
+                      <Button type="submit" className="w-full" disabled={loading}>
+                        {loading ? "Creating account..." : "Create Account"}
+                      </Button>
+                    </>
+                  )}
                 </form>
               </TabsContent>
             </Tabs>
