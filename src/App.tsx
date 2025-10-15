@@ -11,6 +11,7 @@ import Reservations from "./pages/Reservations";
 import Profile from "./pages/Profile";
 import Events from "./pages/Events";
 import Notifications from "./pages/Notifications";
+import Messages from "./pages/Messages";
 import BusinessAuth from "./pages/BusinessAuth";
 import BusinessDashboard from "./pages/BusinessDashboard";
 import NotFound from "./pages/NotFound";
@@ -32,6 +33,7 @@ const App = () => (
           <Route path="/profile" element={<Profile />} />
           <Route path="/events" element={<Events />} />
           <Route path="/notifications" element={<Notifications />} />
+          <Route path="/messages" element={<Messages />} />
           <Route path="/business-auth" element={<BusinessAuth />} />
           <Route path="/business-dashboard" element={<BusinessDashboard />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

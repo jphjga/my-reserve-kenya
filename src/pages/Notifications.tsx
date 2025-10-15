@@ -15,6 +15,7 @@ interface Notification {
   type: string;
   is_read: boolean;
   created_at: string;
+  related_id: string | null;
 }
 
 const Notifications = () => {
@@ -65,6 +66,16 @@ const Notifications = () => {
       ));
     } catch (error) {
       console.error("Error marking notification as read:", error);
+    }
+  };
+
+  const handleNotificationClick = (notification: Notification) => {
+    markAsRead(notification.id);
+    
+    if (notification.type === 'message' && notification.related_id) {
+      navigate(`/messages?conversation=${notification.related_id}`);
+    } else if (notification.type === 'reservation' && notification.related_id) {
+      navigate('/reservations');
     }
   };
 
@@ -124,7 +135,10 @@ const Notifications = () => {
             {notifications.map((notification) => (
               <Card 
                 key={notification.id}
-                className={`${!notification.is_read ? 'border-primary' : ''}`}
+                className={`${!notification.is_read ? 'border-primary' : ''} ${
+                  notification.related_id ? 'cursor-pointer hover:bg-accent' : ''
+                }`}
+                onClick={() => notification.related_id && handleNotificationClick(notification)}
               >
                 <CardHeader>
                   <div className="flex justify-between items-start">
@@ -142,7 +156,10 @@ const Notifications = () => {
                         <Button
                           size="sm"
                           variant="ghost"
-                          onClick={() => markAsRead(notification.id)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            markAsRead(notification.id);
+                          }}
                         >
                           <Check className="h-4 w-4" />
                         </Button>
@@ -152,6 +169,11 @@ const Notifications = () => {
                 </CardHeader>
                 <CardContent>
                   <p>{notification.message}</p>
+                  {notification.related_id && (
+                    <p className="text-sm text-muted-foreground mt-2">
+                      Click to view {notification.type === 'message' ? 'conversation' : 'details'}
+                    </p>
+                  )}
                 </CardContent>
               </Card>
             ))}

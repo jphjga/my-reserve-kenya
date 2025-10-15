@@ -1,7 +1,7 @@
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { User, LogOut, Calendar, Home, Ticket, Bell } from "lucide-react";
+import { User, LogOut, Calendar, Home, Ticket, Bell, MessageSquare } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useState, useEffect } from "react";
@@ -90,6 +90,12 @@ export const Navigation = () => {
                 <Link to="/events">
                   <Ticket className="w-4 h-4 mr-2" />
                   Events
+                </Link>
+              </Button>
+              <Button variant="ghost" size="sm" asChild>
+                <Link to="/messages">
+                  <MessageSquare className="w-4 h-4 mr-2" />
+                  Messages
                 </Link>
               </Button>
               <Button variant="ghost" size="sm" asChild className="relative">

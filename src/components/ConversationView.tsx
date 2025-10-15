@@ -24,12 +24,14 @@ interface ConversationViewProps {
     time: string;
     people: number;
   };
+  isCustomerView?: boolean;
 }
 
 const ConversationView = ({
   conversationId,
   businessId,
   reservationDetails,
+  isCustomerView = false,
 }: ConversationViewProps) => {
   const { toast } = useToast();
   const [messages, setMessages] = useState<Message[]>([]);
@@ -87,7 +89,7 @@ const ConversationView = ({
         .from("messages")
         .update({ is_read: true })
         .eq("conversation_id", conversationId)
-        .eq("is_from_business", false);
+        .eq("is_from_business", isCustomerView);
     } catch (error) {
       console.error("Error marking messages as read:", error);
     }
@@ -106,7 +108,7 @@ const ConversationView = ({
         business_id: businessId,
         sender_id: user.id,
         message: newMessage,
-        is_from_business: true,
+        is_from_business: !isCustomerView,
         is_read: false,
       });
 
