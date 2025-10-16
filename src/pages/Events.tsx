@@ -148,7 +148,7 @@ const Events = () => {
                         .from('business_users')
                         .select('*')
                         .eq('id', session.user.id)
-                        .single();
+                        .maybeSingle();
                       
                       if (businessUser) {
                         toast({
@@ -159,7 +159,7 @@ const Events = () => {
                         return;
                       }
                       
-                      navigate(`/booking/${event.id}`);
+                      navigate(`/book/${event.id}`);
                     }}
                   >
                     {event.available_tickets > 0 ? (event.ticket_price > 0 ? "Buy Tickets" : "Book Now") : "Sold Out"}

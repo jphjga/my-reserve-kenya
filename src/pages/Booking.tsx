@@ -115,10 +115,16 @@ const Booking = () => {
       .from('events')
       .select('id, title, event_type, requires_upfront_payment, booking_item_type, available_tickets, ticket_price, business_id')
       .eq('id', id)
-      .single();
+      .maybeSingle();
 
-    if (eventError) {
+    if (eventError || !eventData) {
       console.error('Error loading event:', eventError);
+      toast({
+        title: 'Event not found',
+        description: 'The selected event could not be found. Please try another.',
+        variant: 'destructive',
+      });
+      navigate('/events');
       return;
     }
 
@@ -128,10 +134,17 @@ const Booking = () => {
       .from('businesses')
       .select('id, name, business_type, price_range')
       .eq('id', eventData.business_id)
-      .single();
+      .maybeSingle();
 
-    if (businessError) {
+    if (businessError || !businessData) {
       console.error('Error loading business:', businessError);
+      toast({
+        title: 'Business not found',
+        description: 'We could not load the business for this event.',
+        variant: 'destructive',
+      });
+      navigate('/events');
+      return;
     } else {
       setBusiness(businessData);
     }

@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { MapPin, Star, Phone, Calendar, ArrowLeft, Hotel, UtensilsCrossed } from "lucide-react";
 import type { User } from "@supabase/supabase-js";
+import { useToast } from "@/hooks/use-toast";
 
 interface Business {
   id: string;
@@ -26,6 +27,7 @@ const BusinessDetails = () => {
   const navigate = useNavigate();
   const [business, setBusiness] = useState<Business | null>(null);
   const [user, setUser] = useState<User | null>(null);
+  const { toast } = useToast();
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -59,12 +61,48 @@ const BusinessDetails = () => {
     }
   };
 
-  const handleReserveClick = () => {
+  const handleReserveClick = async () => {
     if (!user) {
       navigate('/auth');
       return;
     }
-    navigate(`/book/${id}`);
+
+    // Prevent business accounts from booking
+    const { data: businessUser } = await supabase
+      .from('business_users')
+      .select('*')
+      .eq('id', user.id)
+      .maybeSingle();
+
+    if (businessUser) {
+      toast({
+        title: 'Access Restricted',
+        description: 'Business accounts cannot make reservations. Please use a customer account.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    // Find the next upcoming event for this business
+    const today = new Date().toISOString().split('T')[0];
+    const { data: upcomingEvent } = await supabase
+      .from('events')
+      .select('id')
+      .eq('business_id', id)
+      .gte('event_date', today)
+      .order('event_date', { ascending: true })
+      .limit(1)
+      .maybeSingle();
+
+    if (upcomingEvent) {
+      navigate(`/book/${upcomingEvent.id}`);
+    } else {
+      toast({
+        title: 'No bookable events',
+        description: 'This business has no upcoming events available to book right now.',
+      });
+      navigate('/events');
+    }
   };
 
   if (!business) {
