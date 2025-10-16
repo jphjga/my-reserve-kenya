@@ -5,7 +5,8 @@ import { Navigation } from "@/components/Navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { MapPin, Star, ArrowRight, UtensilsCrossed, Hotel } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { MapPin, Star, ArrowRight, UtensilsCrossed, Hotel, Search } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import heroCelebration from "@/assets/hero-celebration.jpg";
 
@@ -24,6 +25,7 @@ interface Business {
 const Home = () => {
   const [businesses, setBusinesses] = useState<Business[]>([]);
   const [filter, setFilter] = useState<'all' | 'restaurant' | 'hotel'>('all');
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     loadBusinesses();
@@ -42,9 +44,14 @@ const Home = () => {
     }
   };
 
-  const filteredBusinesses = filter === 'all' 
-    ? businesses 
-    : businesses.filter(b => b.business_type === filter);
+  const filteredBusinesses = businesses
+    .filter(b => filter === 'all' || b.business_type === filter)
+    .filter(b => 
+      searchQuery === '' || 
+      b.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      b.location.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      b.description.toLowerCase().includes(searchQuery.toLowerCase())
+    );
 
   return (
     <div className="min-h-screen bg-background">
@@ -83,6 +90,19 @@ const Home = () => {
             <p className="text-xl text-muted-foreground">
               From fine dining to luxury stays, find your next experience
             </p>
+          </div>
+
+          <div className="max-w-2xl mx-auto mb-8">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-5 h-5" />
+              <Input
+                type="text"
+                placeholder="Search businesses by name, location, or description..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10 py-6 text-lg"
+              />
+            </div>
           </div>
 
           <Tabs value={filter} onValueChange={(v) => setFilter(v as any)} className="mb-8">

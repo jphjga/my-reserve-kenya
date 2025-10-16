@@ -49,24 +49,60 @@ const Booking = () => {
   });
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (!session) {
         navigate('/auth');
         return;
       }
+      
+      // Check if user is a business user
+      const { data: businessUser } = await supabase
+        .from('business_users')
+        .select('*')
+        .eq('id', session.user.id)
+        .single();
+      
+      if (businessUser) {
+        toast({
+          title: "Access Restricted",
+          description: "Business accounts cannot make reservations. Please use a customer account.",
+          variant: "destructive",
+        });
+        navigate('/');
+        return;
+      }
+      
       setUser(session.user);
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       if (!session) {
         navigate('/auth');
         return;
       }
+      
+      // Check if user is a business user
+      const { data: businessUser } = await supabase
+        .from('business_users')
+        .select('*')
+        .eq('id', session.user.id)
+        .single();
+      
+      if (businessUser) {
+        toast({
+          title: "Access Restricted",
+          description: "Business accounts cannot make reservations. Please use a customer account.",
+          variant: "destructive",
+        });
+        navigate('/');
+        return;
+      }
+      
       setUser(session.user);
     });
 
     return () => subscription.unsubscribe();
-  }, [navigate]);
+  }, [navigate, toast]);
 
   useEffect(() => {
     if (id) {

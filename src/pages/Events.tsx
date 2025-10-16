@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -6,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Calendar, MapPin, Ticket } from "lucide-react";
 import { Navigation } from "@/components/Navigation";
 import { format } from "date-fns";
+import { useToast } from "@/hooks/use-toast";
 
 interface Event {
   id: string;
@@ -25,6 +27,8 @@ interface Event {
 const Events = () => {
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
+  const { toast } = useToast();
 
   useEffect(() => {
     fetchEvents();
@@ -123,7 +127,41 @@ const Events = () => {
                     )}
                   </div>
 
-                  <Button className="w-full" disabled={event.available_tickets === 0}>
+                  <Button 
+                    className="w-full" 
+                    disabled={event.available_tickets === 0}
+                    onClick={async () => {
+                      // Check if user is logged in and if they're a business user
+                      const { data: { session } } = await supabase.auth.getSession();
+                      
+                      if (!session) {
+                        toast({
+                          title: "Sign in required",
+                          description: "Please sign in to book this event",
+                          variant: "destructive",
+                        });
+                        navigate('/auth');
+                        return;
+                      }
+                      
+                      const { data: businessUser } = await supabase
+                        .from('business_users')
+                        .select('*')
+                        .eq('id', session.user.id)
+                        .single();
+                      
+                      if (businessUser) {
+                        toast({
+                          title: "Access Restricted",
+                          description: "Business accounts cannot make reservations. Please use a customer account.",
+                          variant: "destructive",
+                        });
+                        return;
+                      }
+                      
+                      navigate(`/booking/${event.id}`);
+                    }}
+                  >
                     {event.available_tickets > 0 ? (event.ticket_price > 0 ? "Buy Tickets" : "Book Now") : "Sold Out"}
                   </Button>
                 </CardContent>
