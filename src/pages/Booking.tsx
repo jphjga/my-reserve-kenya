@@ -60,7 +60,7 @@ const Booking = () => {
         .from('business_users')
         .select('*')
         .eq('id', session.user.id)
-        .single();
+        .maybeSingle();
       
       if (businessUser) {
         toast({
@@ -86,7 +86,7 @@ const Booking = () => {
         .from('business_users')
         .select('*')
         .eq('id', session.user.id)
-        .single();
+        .maybeSingle();
       
       if (businessUser) {
         toast({

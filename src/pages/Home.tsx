@@ -72,11 +72,6 @@ const Home = () => {
               <p className="text-xl mb-8 text-white/90">
                 Book restaurants and hotels across Kenya with secure M-Pesa payments
               </p>
-              <Button size="lg" variant="secondary" asChild>
-                <Link to="#browse">
-                  Browse Businesses <ArrowRight className="ml-2 w-5 h-5" />
-                </Link>
-              </Button>
             </div>
           </div>
         </div>
