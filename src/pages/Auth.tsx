@@ -63,16 +63,9 @@ const Auth = () => {
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // If business account type, redirect to business auth page
-    if (accountType === "business") {
-      navigate("/business-auth");
-      return;
-    }
-
     setLoading(true);
 
-    const { error } = await supabase.auth.signInWithPassword({
+    const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
@@ -83,6 +76,33 @@ const Auth = () => {
         description: error.message,
         variant: "destructive",
       });
+      setLoading(false);
+      return;
+    }
+
+    // Check account type and redirect accordingly
+    if (accountType === "business") {
+      // Verify user is actually a business user
+      const { data: businessUser } = await supabase
+        .from('business_users')
+        .select('*')
+        .eq('id', data.user.id)
+        .single();
+
+      if (businessUser) {
+        toast({
+          title: "Welcome back!",
+          description: "Redirecting to business dashboard...",
+        });
+        navigate("/business-dashboard");
+      } else {
+        toast({
+          title: "Access denied",
+          description: "This account is not registered as a business.",
+          variant: "destructive",
+        });
+        await supabase.auth.signOut();
+      }
     } else {
       toast({
         title: "Welcome back!",
@@ -147,13 +167,8 @@ const Auth = () => {
                     />
                   </div>
                   <Button type="submit" className="w-full" disabled={loading}>
-                    {accountType === "business" ? "Continue to Business Portal" : (loading ? "Signing in..." : "Sign In")}
+                    {loading ? "Signing in..." : "Sign In"}
                   </Button>
-                  {accountType === "business" && (
-                    <p className="text-sm text-muted-foreground text-center">
-                      You'll be redirected to the business portal
-                    </p>
-                  )}
                 </form>
               </TabsContent>
               

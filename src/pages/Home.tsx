@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Badge } from "@/components/ui/badge";
 import { MapPin, Star, ArrowRight, UtensilsCrossed, Hotel } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import heroCelebration from "@/assets/hero-celebration.jpg";
 
 interface Business {
   id: string;
@@ -50,20 +51,26 @@ const Home = () => {
       <Navigation />
       
       {/* Hero Section */}
-      <section className="relative bg-gradient-to-r from-primary to-primary-glow text-primary-foreground py-20">
-        <div className="container mx-auto px-4">
+      <section className="relative py-20 overflow-hidden">
+        <div 
+          className="absolute inset-0 bg-cover bg-center"
+          style={{ backgroundImage: `url(${heroCelebration})` }}
+        >
+          <div className="absolute inset-0 bg-gradient-to-r from-black/70 to-black/50" />
+        </div>
+        <div className="container mx-auto px-4 relative z-10">
           <div className="flex justify-between items-center">
-          <div className="max-w-2xl">
-            <h1 className="text-5xl font-bold mb-4">Reserve Your Perfect Experience</h1>
-            <p className="text-xl mb-8 opacity-90">
-              Book restaurants and hotels across Kenya with secure M-Pesa payments
-            </p>
-            <Button size="lg" variant="secondary" asChild>
-              <Link to="#browse">
-                Browse Businesses <ArrowRight className="ml-2 w-5 h-5" />
-              </Link>
-            </Button>
-          </div>
+            <div className="max-w-2xl">
+              <h1 className="text-5xl font-bold mb-4 text-white">Reserve Your Perfect Experience</h1>
+              <p className="text-xl mb-8 text-white/90">
+                Book restaurants and hotels across Kenya with secure M-Pesa payments
+              </p>
+              <Button size="lg" variant="secondary" asChild>
+                <Link to="#browse">
+                  Browse Businesses <ArrowRight className="ml-2 w-5 h-5" />
+                </Link>
+              </Button>
+            </div>
           </div>
         </div>
       </section>
