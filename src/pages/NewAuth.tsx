@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -29,26 +28,15 @@ const NewAuth = () => {
     e.preventDefault();
     setLoading(true);
 
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email: formData.email,
-      password: formData.password,
-    });
-
-    if (error) {
-      toast({
-        title: "Login Failed",
-        description: error.message,
-        variant: "destructive",
-      });
-    } else {
+    // Mock authentication for prototype
+    setTimeout(() => {
       toast({
         title: "Welcome back!",
         description: "Redirecting to your dashboard...",
       });
       navigate('/dashboard');
-    }
-
-    setLoading(false);
+      setLoading(false);
+    }, 1000);
   };
 
   const handleSignUp = async (e: React.FormEvent) => {
@@ -69,34 +57,15 @@ const NewAuth = () => {
 
     setLoading(true);
 
-    const { data, error } = await supabase.auth.signUp({
-      email: formData.email,
-      password: formData.password,
-      options: {
-        emailRedirectTo: `${window.location.origin}/dashboard`,
-        data: {
-          full_name: formData.fullName,
-          phone: formData.phone,
-          interests: selectedInterests
-        }
-      }
-    });
-
-    if (error) {
-      toast({
-        title: "Sign Up Failed",
-        description: error.message,
-        variant: "destructive",
-      });
-    } else {
+    // Mock authentication for prototype
+    setTimeout(() => {
       toast({
         title: "Account Created!",
         description: "Welcome to MyReserve Kenya. Setting up your profile...",
       });
       navigate('/dashboard');
-    }
-
-    setLoading(false);
+      setLoading(false);
+    }, 1000);
   };
 
   return (
