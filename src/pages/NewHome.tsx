@@ -9,6 +9,7 @@ import { mockBusinesses } from "@/mocks/businesses";
 import { CardContent } from "@/components/ui/card";
 import { MapPin, Star, Sparkles } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import heroImage from "@/assets/hero-celebration.jpg";
 
 const NewHome = () => {
   const navigate = useNavigate();
@@ -53,7 +54,7 @@ const NewHome = () => {
       <section className="relative overflow-hidden">
         <div 
           className="absolute inset-0 bg-cover bg-center opacity-20"
-          style={{ backgroundImage: 'url(/src/assets/hero-celebration.jpg)' }}
+          style={{ backgroundImage: `url(${heroImage})` }}
         />
         <div className="relative container mx-auto px-4 py-24">
           <div className="max-w-4xl mx-auto text-center">
