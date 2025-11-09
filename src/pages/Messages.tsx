@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Navigation } from "@/components/Navigation";
 import ConversationList from "@/components/ConversationList";
@@ -7,165 +6,106 @@ import ConversationView from "@/components/ConversationView";
 
 interface Conversation {
   id: string;
+  conversationId: string;
   customerName: string;
-  reservationDetails: string;
+  businessName: string;
+  businessId: string;
+  reservationDate: string;
+  reservationTime: string;
+  reservationPeople: number;
   lastMessage: string;
   unreadCount: number;
   lastMessageTime: string;
-  reservation: {
-    date: string;
-    time: string;
-    people: number;
-  };
-  businessName: string;
-  businessId: string;
 }
+
+const mockConversations: Conversation[] = [
+  {
+    id: "1",
+    conversationId: "conv-1",
+    customerName: "John Doe",
+    businessName: "Grand Hotel",
+    businessId: "bus-1",
+    reservationDate: "2024-12-25",
+    reservationTime: "14:00",
+    reservationPeople: 2,
+    lastMessage: "What time is check-in?",
+    unreadCount: 2,
+    lastMessageTime: "2 hours ago",
+  },
+  {
+    id: "2",
+    conversationId: "conv-2",
+    customerName: "Jane Smith",
+    businessName: "Ocean View Restaurant",
+    businessId: "bus-2",
+    reservationDate: "2024-12-24",
+    reservationTime: "19:00",
+    reservationPeople: 4,
+    lastMessage: "Can we add dietary restrictions?",
+    unreadCount: 0,
+    lastMessageTime: "5 hours ago",
+  },
+];
 
 const Messages = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [conversations, setConversations] = useState<Conversation[]>([]);
-  const [selectedConversation, setSelectedConversation] = useState<string | undefined>(
-    searchParams.get("conversation") || undefined
-  );
+  const [selectedConversationId, setSelectedConversationId] = useState<string | undefined>();
 
   useEffect(() => {
-    checkAuthAndFetch();
-  }, []);
-
-  const checkAuthAndFetch = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
+    // Mock auth check
+    const isLoggedIn = sessionStorage.getItem("mock-logged-in");
+    if (!isLoggedIn) {
       navigate("/auth");
       return;
     }
-    fetchConversations();
-  };
 
-  useEffect(() => {
-    const setupRealtime = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const channel = supabase
-        .channel('customer-messages')
-        .on(
-          'postgres_changes',
-          {
-            event: '*',
-            schema: 'public',
-            table: 'messages',
-            filter: `sender_id=eq.${user.id}`,
-          },
-          () => fetchConversations()
-        )
-        .subscribe();
-
-      return () => {
-        supabase.removeChannel(channel);
-      };
-    };
+    // Load mock conversations
+    setConversations(mockConversations);
     
-    setupRealtime();
-  }, []);
-
-  const fetchConversations = async () => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const { data: messages, error } = await supabase
-        .from("messages")
-        .select(`
-          *,
-          reservations (
-            reservation_date,
-            reservation_time,
-            number_of_people,
-            business_id
-          )
-        `)
-        .eq("sender_id", user.id)
-        .eq("is_from_business", false)
-        .not("conversation_id", "is", null)
-        .order("created_at", { ascending: false });
-
-      if (error) throw error;
-
-      const conversationMap = new Map<string, any>();
-
-      for (const msg of messages || []) {
-        const convId = msg.conversation_id;
-        if (!conversationMap.has(convId)) {
-          const { data: business } = await supabase
-            .from("businesses")
-            .select("name")
-            .eq("id", msg.reservations?.business_id)
-            .single();
-
-          const { data: unreadMessages } = await supabase
-            .from("messages")
-            .select("id", { count: "exact" })
-            .eq("conversation_id", convId)
-            .eq("is_from_business", true)
-            .eq("is_read", false);
-
-          conversationMap.set(convId, {
-            id: convId,
-            customerName: "You",
-            businessName: business?.name || "Business",
-            businessId: msg.reservations?.business_id || "",
-            reservationDetails: msg.reservations 
-              ? `${new Date(msg.reservations.reservation_date).toLocaleDateString()} at ${msg.reservations.reservation_time}`
-              : "No reservation",
-            lastMessage: msg.message,
-            unreadCount: unreadMessages?.length || 0,
-            lastMessageTime: new Date(msg.created_at).toLocaleString(),
-            reservation: {
-              date: msg.reservations?.reservation_date || "",
-              time: msg.reservations?.reservation_time || "",
-              people: msg.reservations?.number_of_people || 0,
-            },
-          });
-        }
-      }
-
-      setConversations(Array.from(conversationMap.values()));
-    } catch (error) {
-      console.error("Error fetching conversations:", error);
+    // Auto-select conversation from URL
+    const conversationId = searchParams.get("conversation");
+    if (conversationId) {
+      const conv = mockConversations.find(c => c.conversationId === conversationId);
+      if (conv) setSelectedConversationId(conv.id);
     }
-  };
+  }, [navigate, searchParams]);
 
-  const selectedConv = conversations.find((c) => c.id === selectedConversation);
+  const selectedConv = conversations.find(c => c.id === selectedConversationId);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background to-muted">
       <Navigation />
-      <div className="container mx-auto p-4 pt-20">
-        <h1 className="text-4xl font-bold mb-6">My Messages</h1>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 h-[600px]">
-          <div className="md:col-span-1">
-            <ConversationList
-              conversations={conversations}
-              onSelectConversation={setSelectedConversation}
-              selectedConversationId={selectedConversation}
-            />
-          </div>
-          <div className="md:col-span-2">
+      <div className="container mx-auto px-4 py-8">
+        <h1 className="text-3xl font-bold mb-6">My Messages</h1>
+        <div className="grid md:grid-cols-[350px_1fr] gap-6">
+          <ConversationList
+            conversations={conversations.map(c => ({
+              id: c.id,
+              customerName: c.customerName,
+              reservationDetails: `${c.businessName} - ${c.reservationDate}`,
+              lastMessage: c.lastMessage,
+              unreadCount: c.unreadCount,
+              lastMessageTime: c.lastMessageTime,
+            }))}
+            selectedConversationId={selectedConversationId}
+            onSelectConversation={setSelectedConversationId}
+          />
+          <div>
             {selectedConv ? (
               <ConversationView
-                conversationId={selectedConv.id}
+                conversationId={selectedConv.conversationId}
                 businessId={selectedConv.businessId}
                 reservationDetails={{
-                  customerName: selectedConv.businessName,
-                  date: selectedConv.reservation.date,
-                  time: selectedConv.reservation.time,
-                  people: selectedConv.reservation.people,
+                  customerName: selectedConv.customerName,
+                  date: selectedConv.reservationDate,
+                  time: selectedConv.reservationTime,
+                  people: selectedConv.reservationPeople,
                 }}
-                isCustomerView={true}
               />
             ) : (
-              <div className="h-full flex items-center justify-center text-muted-foreground">
+              <div className="flex items-center justify-center h-96 text-muted-foreground">
                 Select a conversation to view messages
               </div>
             )}

@@ -73,7 +73,6 @@ const NewHome = () => {
             </p>
             <SmartSearch
               onSearch={(query) => setSearchQuery(query)}
-              onAISearch={() => {}}
               className="max-w-3xl mx-auto"
             />
           </div>
