@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Bell, CheckCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 interface Notification {
   id: string;
@@ -17,61 +18,80 @@ interface Notification {
   related_id?: string;
 }
 
-const mockNotifications: Notification[] = [
-  {
-    id: "1",
-    title: "Reservation Confirmed",
-    message: "Your reservation at Grand Hotel has been confirmed for Dec 25, 2024",
-    type: "reservation",
-    is_read: false,
-    created_at: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-    related_id: "res-1",
-  },
-  {
-    id: "2",
-    title: "Payment Successful",
-    message: "Payment of KSh 25,000 has been processed successfully",
-    type: "payment",
-    is_read: false,
-    created_at: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(),
-  },
-  {
-    id: "3",
-    title: "New Message",
-    message: "You have a new message from Ocean View Restaurant",
-    type: "message",
-    is_read: true,
-    created_at: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
-    related_id: "msg-1",
-  },
-];
-
 const Notifications = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Mock auth check
-    const isLoggedIn = sessionStorage.getItem("mock-logged-in");
-    if (!isLoggedIn) {
+    checkAuthAndFetch();
+
+    const channel = supabase
+      .channel('notifications')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'notifications',
+        },
+        () => fetchNotifications()
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
+  const checkAuthAndFetch = async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
       navigate("/auth");
       return;
     }
 
-    // Load mock notifications
-    setNotifications(mockNotifications);
-  }, [navigate]);
+    await fetchNotifications();
+  };
 
-  const markAsRead = (id: string) => {
-    setNotifications((prev) =>
-      prev.map((notif) =>
-        notif.id === id ? { ...notif, is_read: true } : notif
-      )
-    );
-    toast({
-      title: "Notification marked as read",
-    });
+  const fetchNotifications = async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+
+      const { data } = await supabase
+        .from("notifications")
+        .select("*")
+        .eq("user_id", session.user.id)
+        .order("created_at", { ascending: false });
+
+      if (data) setNotifications(data);
+    } catch (error) {
+      console.error("Error fetching notifications:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const markAsRead = async (id: string) => {
+    try {
+      await supabase
+        .from("notifications")
+        .update({ is_read: true })
+        .eq("id", id);
+
+      setNotifications((prev) =>
+        prev.map((notif) =>
+          notif.id === id ? { ...notif, is_read: true } : notif
+        )
+      );
+      toast({
+        title: "Notification marked as read",
+      });
+    } catch (error) {
+      console.error("Error marking notification as read:", error);
+    }
   };
 
   const handleNotificationClick = (notification: Notification) => {
@@ -87,13 +107,29 @@ const Notifications = () => {
     }
   };
 
-  const markAllAsRead = () => {
-    setNotifications((prev) =>
-      prev.map((notif) => ({ ...notif, is_read: true }))
-    );
-    toast({
-      title: "All notifications marked as read",
-    });
+  const markAllAsRead = async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+
+      const unreadIds = notifications.filter(n => !n.is_read).map(n => n.id);
+      
+      if (unreadIds.length > 0) {
+        await supabase
+          .from("notifications")
+          .update({ is_read: true })
+          .in("id", unreadIds);
+
+        setNotifications((prev) =>
+          prev.map((notif) => ({ ...notif, is_read: true }))
+        );
+        toast({
+          title: "All notifications marked as read",
+        });
+      }
+    } catch (error) {
+      console.error("Error marking all as read:", error);
+    }
   };
 
   const formatDate = (dateString: string) => {
@@ -120,7 +156,13 @@ const Notifications = () => {
           )}
         </div>
 
-        {notifications.length === 0 ? (
+        {loading ? (
+          <Card>
+            <CardContent className="flex flex-col items-center justify-center py-12">
+              <p className="text-muted-foreground">Loading notifications...</p>
+            </CardContent>
+          </Card>
+        ) : notifications.length === 0 ? (
           <Card>
             <CardContent className="flex flex-col items-center justify-center py-12">
               <Bell className="h-12 w-12 text-muted-foreground mb-4" />

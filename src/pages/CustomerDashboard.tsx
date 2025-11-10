@@ -1,19 +1,86 @@
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { GlowingCard } from "@/components/GlowingCard";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { AIChatbot } from "@/components/AIChatbot";
-import { mockBusinesses } from "@/mocks/businesses";
-import { mockEvents } from "@/mocks/events";
 import { CardContent } from "@/components/ui/card";
-import { MapPin, Star, Calendar, TrendingUp, Sparkles } from "lucide-react";
+import { MapPin, Star, Calendar, TrendingUp, Sparkles, LogOut } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+
+interface Business {
+  id: string;
+  name: string;
+  location: string;
+  rating: number;
+  price_range: string;
+  business_type: string;
+}
+
+interface Event {
+  id: string;
+  title: string;
+  business_id: string;
+  event_date: string;
+  event_time: string;
+  ticket_price: number;
+  businesses: { name: string };
+}
 
 const CustomerDashboard = () => {
   const navigate = useNavigate();
+  const { toast } = useToast();
+  const [recommendedBusinesses, setRecommendedBusinesses] = useState<Business[]>([]);
+  const [trendingEvents, setTrendingEvents] = useState<Event[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  // Mock data for prototype
-  const recommendedBusinesses = mockBusinesses.slice(0, 3);
-  const trendingEvents = mockEvents.slice(0, 3);
+  useEffect(() => {
+    checkAuth();
+    fetchData();
+  }, []);
+
+  const checkAuth = async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      navigate('/auth');
+    }
+  };
+
+  const fetchData = async () => {
+    try {
+      // Fetch recommended businesses
+      const { data: businesses } = await supabase
+        .from('businesses')
+        .select('id, name, location, rating, price_range, business_type')
+        .limit(3);
+
+      if (businesses) setRecommendedBusinesses(businesses);
+
+      // Fetch trending events
+      const { data: events } = await supabase
+        .from('events')
+        .select('id, title, business_id, event_date, event_time, ticket_price, businesses(name)')
+        .gte('event_date', new Date().toISOString().split('T')[0])
+        .order('event_date', { ascending: true })
+        .limit(3);
+
+      if (events) setTrendingEvents(events as any);
+    } catch (error) {
+      console.error('Error fetching data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    toast({
+      title: "Logged out",
+      description: "You have been logged out successfully",
+    });
+    navigate('/auth');
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -38,20 +105,30 @@ const CustomerDashboard = () => {
               Profile
             </Button>
             <ThemeToggle />
+            <Button variant="outline" onClick={handleLogout}>
+              <LogOut className="mr-2 h-4 w-4" />
+              Logout
+            </Button>
           </div>
         </div>
       </header>
 
       <main className="container mx-auto px-4 py-8">
-        {/* Welcome Section */}
-        <div className="mb-12">
-          <h2 className="text-4xl font-bold text-foreground mb-2">
-            Welcome Back! 👋
-          </h2>
-          <p className="text-muted-foreground text-lg">
-            Discover amazing venues and events tailored just for you
-          </p>
-        </div>
+        {loading ? (
+          <div className="text-center py-12">
+            <p className="text-muted-foreground">Loading your personalized dashboard...</p>
+          </div>
+        ) : (
+          <>
+            {/* Welcome Section */}
+            <div className="mb-12">
+              <h2 className="text-4xl font-bold text-foreground mb-2">
+                Welcome Back! 👋
+              </h2>
+              <p className="text-muted-foreground text-lg">
+                Discover amazing venues and events tailored just for you
+              </p>
+            </div>
 
         {/* AI Recommendations */}
         <section className="mb-12">
@@ -65,7 +142,6 @@ const CustomerDashboard = () => {
             {recommendedBusinesses.map((business) => (
               <GlowingCard
                 key={business.id}
-                glowColor={business.glow_color}
                 onClick={() => navigate(`/business/${business.id}`)}
               >
                 <CardContent className="p-0">
@@ -80,9 +156,9 @@ const CustomerDashboard = () => {
                     </div>
                     <div className="flex items-center gap-2">
                       <Star className="h-4 w-4 fill-accent text-accent" />
-                      <span className="text-sm font-medium">{business.rating}</span>
+                      <span className="text-sm font-medium">{business.rating || 0}</span>
                       <span className="text-sm text-muted-foreground">
-                        • {business.price_range}
+                        • {business.price_range || 'N/A'}
                       </span>
                     </div>
                   </div>
@@ -104,7 +180,6 @@ const CustomerDashboard = () => {
             {trendingEvents.map((event) => (
               <GlowingCard
                 key={event.id}
-                glowColor={event.glow_color}
                 onClick={() => navigate(`/book/${event.business_id}`)}
               >
                 <CardContent className="p-0">
@@ -114,17 +189,17 @@ const CustomerDashboard = () => {
                       {event.title}
                     </h4>
                     <p className="text-sm text-muted-foreground mb-2">
-                      {event.business_name}
+                      {event.businesses.name}
                     </p>
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                       <Calendar className="h-4 w-4" />
                       <span>
-                        {new Date(event.date).toLocaleDateString()} at {event.time}
+                        {new Date(event.event_date).toLocaleDateString()} at {event.event_time}
                       </span>
                     </div>
                     <div className="mt-2">
                       <span className="text-lg font-bold text-primary">
-                        KSH {event.price.toLocaleString()}
+                        KSH {Number(event.ticket_price).toLocaleString()}
                       </span>
                     </div>
                   </div>
@@ -178,6 +253,8 @@ const CustomerDashboard = () => {
             </Button>
           </div>
         </section>
+          </>
+        )}
       </main>
 
       <AIChatbot />

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,6 +8,7 @@ import { InterestSelector } from "@/components/InterestSelector";
 import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { supabase } from "@/integrations/supabase/client";
 
 const NewAuth = () => {
   const navigate = useNavigate();
@@ -24,19 +25,47 @@ const NewAuth = () => {
     phone: ''
   });
 
+  useEffect(() => {
+    // Check if user is already logged in
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
+        navigate('/dashboard');
+      }
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_IN' && session) {
+        navigate('/dashboard');
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, [navigate]);
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
-    // Mock authentication for prototype
-    setTimeout(() => {
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
+        email: formData.email,
+        password: formData.password,
+      });
+
+      if (error) throw error;
+
       toast({
         title: "Welcome back!",
         description: "Redirecting to your dashboard...",
       });
-      navigate('/dashboard');
+    } catch (error: any) {
+      toast({
+        title: "Login failed",
+        description: error.message,
+        variant: "destructive",
+      });
       setLoading(false);
-    }, 1000);
+    }
   };
 
   const handleSignUp = async (e: React.FormEvent) => {
@@ -57,15 +86,36 @@ const NewAuth = () => {
 
     setLoading(true);
 
-    // Mock authentication for prototype
-    setTimeout(() => {
-      toast({
-        title: "Account Created!",
-        description: "Welcome to MyReserve Kenya. Setting up your profile...",
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email: formData.email,
+        password: formData.password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/`,
+          data: {
+            full_name: formData.fullName,
+            phone: formData.phone,
+          },
+        },
       });
-      navigate('/dashboard');
+
+      if (error) throw error;
+
+      if (data.user) {
+        // Store interests (you can add this to profile later if needed)
+        toast({
+          title: "Account Created!",
+          description: "Welcome to MyReserve Kenya. Redirecting...",
+        });
+      }
+    } catch (error: any) {
+      toast({
+        title: "Sign up failed",
+        description: error.message,
+        variant: "destructive",
+      });
       setLoading(false);
-    }, 1000);
+    }
   };
 
   return (

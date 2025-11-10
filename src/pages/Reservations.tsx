@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Calendar, Clock, Users, MapPin } from "lucide-react";
 import MessageDialog from "@/components/MessageDialog";
+import { supabase } from "@/integrations/supabase/client";
 
 interface Reservation {
   id: string;
@@ -13,60 +14,55 @@ interface Reservation {
     name: string;
     location: string;
   };
-  date: string;
-  time: string;
+  reservation_date: string;
+  reservation_time: string;
   number_of_people: number;
   total_amount: number;
   payment_status: string;
   status: string;
 }
 
-const mockReservations: Reservation[] = [
-  {
-    id: "1",
-    businesses: {
-      id: "bus-1",
-      name: "Grand Hotel & Spa",
-      location: "Nairobi, Kenya",
-    },
-    date: "2024-12-25",
-    time: "14:00",
-    number_of_people: 2,
-    total_amount: 25000,
-    payment_status: "completed",
-    status: "confirmed",
-  },
-  {
-    id: "2",
-    businesses: {
-      id: "bus-2",
-      name: "Ocean View Restaurant",
-      location: "Mombasa, Kenya",
-    },
-    date: "2024-12-24",
-    time: "19:00",
-    number_of_people: 4,
-    total_amount: 8000,
-    payment_status: "pending",
-    status: "pending",
-  },
-];
-
 const Reservations = () => {
   const navigate = useNavigate();
   const [reservations, setReservations] = useState<Reservation[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Mock auth check
-    const isLoggedIn = sessionStorage.getItem("mock-logged-in");
-    if (!isLoggedIn) {
+    checkAuthAndFetch();
+  }, []);
+
+  const checkAuthAndFetch = async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
       navigate("/auth");
       return;
     }
 
-    // Load mock reservations
-    setReservations(mockReservations);
-  }, [navigate]);
+    await fetchReservations(session.user.id);
+  };
+
+  const fetchReservations = async (userId: string) => {
+    try {
+      const { data } = await supabase
+        .from("reservations")
+        .select(`
+          *,
+          businesses (
+            id,
+            name,
+            location
+          )
+        `)
+        .eq("user_id", userId)
+        .order("reservation_date", { ascending: false });
+
+      if (data) setReservations(data as any);
+    } catch (error) {
+      console.error("Error fetching reservations:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -86,7 +82,13 @@ const Reservations = () => {
       <Navigation />
       <div className="container mx-auto px-4 py-8">
         <h1 className="text-3xl font-bold mb-6">My Reservations</h1>
-        {reservations.length === 0 ? (
+        {loading ? (
+          <Card>
+            <CardContent className="pt-6">
+              <p className="text-center text-muted-foreground">Loading reservations...</p>
+            </CardContent>
+          </Card>
+        ) : reservations.length === 0 ? (
           <Card>
             <CardContent className="pt-6">
               <p className="text-center text-muted-foreground">No reservations yet</p>
@@ -114,11 +116,11 @@ const Reservations = () => {
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
                     <div className="flex items-center gap-2">
                       <Calendar className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-sm">{reservation.date}</span>
+                      <span className="text-sm">{reservation.reservation_date}</span>
                     </div>
                     <div className="flex items-center gap-2">
                       <Clock className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-sm">{reservation.time}</span>
+                      <span className="text-sm">{reservation.reservation_time}</span>
                     </div>
                     <div className="flex items-center gap-2">
                       <Users className="h-4 w-4 text-muted-foreground" />
@@ -126,7 +128,7 @@ const Reservations = () => {
                     </div>
                     <div>
                       <span className="text-sm font-semibold">
-                        KSh {reservation.total_amount.toLocaleString()}
+                        KSh {Number(reservation.total_amount).toLocaleString()}
                       </span>
                     </div>
                   </div>

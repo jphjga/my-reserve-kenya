@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Home } from "lucide-react";
 import { Link } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
 
 const BusinessAuth = () => {
   const navigate = useNavigate();
@@ -19,50 +20,128 @@ const BusinessAuth = () => {
   const [location, setLocation] = useState("");
   const [phone, setPhone] = useState("");
 
+  useEffect(() => {
+    // Check if user is already logged in
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
+        checkBusinessUser(session.user.id);
+      }
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === 'SIGNED_IN' && session) {
+        await checkBusinessUser(session.user.id);
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, [navigate]);
+
+  const checkBusinessUser = async (userId: string) => {
+    const { data } = await supabase
+      .from('business_users')
+      .select('business_id')
+      .eq('id', userId)
+      .maybeSingle();
+
+    if (data) {
+      navigate('/business-dashboard');
+    }
+  };
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
-    // Mock login
-    setTimeout(() => {
-      if (email && password) {
-        toast({
-          title: "Success",
-          description: "Logged in successfully (mock)",
-        });
-        navigate("/business-dashboard");
-      } else {
-        toast({
-          title: "Error",
-          description: "Please enter email and password",
-          variant: "destructive",
-        });
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (error) throw error;
+
+      // Check if this user is a business user
+      const { data: businessUser } = await supabase
+        .from('business_users')
+        .select('business_id')
+        .eq('id', data.user.id)
+        .maybeSingle();
+
+      if (!businessUser) {
+        await supabase.auth.signOut();
+        throw new Error("This account is not registered as a business account");
       }
+
+      toast({
+        title: "Success",
+        description: "Logged in successfully",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
       setLoading(false);
-    }, 800);
+    }
   };
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
-    // Mock signup
-    setTimeout(() => {
-      if (businessName && businessType && location && phone && email && password) {
-        toast({
-          title: "Success",
-          description: "Account created! (mock)",
+    try {
+      // Create auth user
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/business-dashboard`,
+        },
+      });
+
+      if (authError) throw authError;
+      if (!authData.user) throw new Error("Failed to create user");
+
+      // Create business entry
+      const { data: business, error: businessError } = await supabase
+        .from('businesses')
+        .insert({
+          name: businessName,
+          business_type: businessType,
+          location,
+          phone,
+          email,
+        })
+        .select()
+        .single();
+
+      if (businessError) throw businessError;
+
+      // Create business_users entry
+      const { error: businessUserError } = await supabase
+        .from('business_users')
+        .insert({
+          id: authData.user.id,
+          business_id: business.id,
+          email,
         });
-        navigate("/business-dashboard");
-      } else {
-        toast({
-          title: "Error",
-          description: "Please fill in all fields",
-          variant: "destructive",
-        });
-      }
+
+      if (businessUserError) throw businessUserError;
+
+      toast({
+        title: "Success",
+        description: "Business account created!",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
       setLoading(false);
-    }, 800);
+    }
   };
 
   return (

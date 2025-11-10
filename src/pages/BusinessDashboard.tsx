@@ -10,6 +10,7 @@ import BusinessMessagesRefactored from "@/components/BusinessMessagesRefactored"
 import BusinessProfileCompletion from "@/components/BusinessProfileCompletion";
 import { Building2, Calendar, MessageSquare, LogOut, Home } from "lucide-react";
 import { Link } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
 
 const BusinessDashboard = () => {
   const navigate = useNavigate();
@@ -19,18 +20,45 @@ const BusinessDashboard = () => {
   const [profileCompleted, setProfileCompleted] = useState(false);
 
   useEffect(() => {
-    // Mock auth check
-    setTimeout(() => {
-      setBusinessId("mock-business-id");
-      setProfileCompleted(true);
-      setLoading(false);
-    }, 500);
+    checkAuth();
   }, []);
 
-  const handleLogout = () => {
+  const checkAuth = async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    
+    if (!session) {
+      navigate("/business-auth");
+      return;
+    }
+
+    // Check if user is a business user and get business ID
+    const { data: businessUser } = await supabase
+      .from('business_users')
+      .select('business_id, businesses(profile_completed)')
+      .eq('id', session.user.id)
+      .maybeSingle();
+
+    if (!businessUser) {
+      toast({
+        title: "Access Denied",
+        description: "This account is not registered as a business account",
+        variant: "destructive",
+      });
+      await supabase.auth.signOut();
+      navigate("/business-auth");
+      return;
+    }
+
+    setBusinessId(businessUser.business_id);
+    setProfileCompleted((businessUser.businesses as any)?.profile_completed || false);
+    setLoading(false);
+  };
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
     toast({
       title: "Logged out",
-      description: "You have been logged out successfully (mock)",
+      description: "You have been logged out successfully",
     });
     navigate("/business-auth");
   };
